@@ -1,5 +1,7 @@
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Date, DateTime, insert, text
 from datetime import datetime
+import csv
+import os
 
 import time
 from functools import wraps
@@ -65,12 +67,27 @@ def LGPD(row):
     
     return tuple(row_list)
 
-users = []
+# Atividade 2: Criar arquivos CSV separados por ano de nascimento
+anos = {}
 with engine.connect() as conn:
-    result = conn.execute(text("SELECT * FROM usuarios LIMIT 5;"))
+    result = conn.execute(text("SELECT * FROM usuarios;"))
     for row in result:
-        row = LGPD(row)
-        users.append(row)
+        row_anonimizado = LGPD(row)
+        ano_nascimento = row_anonimizado[5].year
+        
+        if ano_nascimento not in anos:
+            anos[ano_nascimento] = []
+        anos[ano_nascimento].append(row_anonimizado)
 
-for user in users:
-    print(user)
+# Criar diretório para os arquivos se não existir
+os.makedirs('arquivos_por_ano', exist_ok=True)
+
+# Criar arquivo CSV para cada ano
+for ano, usuarios in anos.items():
+    arquivo = f'arquivos_por_ano/{ano}.csv'
+    with open(arquivo, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['id', 'nome', 'cpf', 'email', 'telefone', 'data_nascimento', 'created_on', 'updated_on'])
+        for usuario in usuarios:
+            writer.writerow(usuario)
+    print(f'Arquivo {arquivo} criado com {len(usuarios)} registros.')
