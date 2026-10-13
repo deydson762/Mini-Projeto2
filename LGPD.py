@@ -91,3 +91,14 @@ for ano, usuarios in anos.items():
         for usuario in usuarios:
             writer.writerow(usuario)
     print(f'Arquivo {arquivo} criado com {len(usuarios)} registros.')
+
+# Atividade 3: Criar arquivo único com todos os registros (apenas nome e CPF, não anonimizados)
+with engine.connect() as conn:
+    result = conn.execute(text("SELECT nome, cpf FROM usuarios;"))
+    
+    with open('todos.csv', 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['nome', 'cpf'])
+        for row in result:
+            writer.writerow(row)
+    print('Arquivo todos.csv criado com todos os registros (nome e CPF não anonimizados).')
