@@ -11,7 +11,7 @@ def medir_tempo(func):
         resultado = func(*args, **kwargs)
         fim = time.perf_counter()     # tempo final
         duracao = fim - inicio
-        print(f"⏱ Função '{func.__name__}' executada em {duracao:.6f} segundos.")
+        print(f"Função '{func.__name__}' executada em {duracao:.6f} segundos.")
         return resultado
     return wrapper
 
@@ -34,7 +34,36 @@ metadata.create_all(engine)
 
 @medir_tempo
 def LGPD(row):
-    return row
+    row_list = list(row)
+    
+    # Anonimizar nome (primeira letra de cada palavra, resto com *)
+    nome = row_list[1]
+    if nome:
+        partes = nome.split()
+        nome_anonimizado = ' '.join(p[0] + '*' * (len(p) - 1) if len(p) > 1 else p for p in partes)
+        row_list[1] = nome_anonimizado
+    
+    # Anonimizar CPF (primeiros 3 caracteres, resto com *)
+    cpf = row_list[2]
+    if cpf:
+        cpf_anonimizado = cpf[:3] + cpf[3:].replace(cpf[3:-2], '*' * (len(cpf) - 5))
+        row_list[2] = cpf_anonimizado
+    
+    # Anonimizar email (primeira letra, resto com * até o @)
+    email = row_list[3]
+    if email:
+        partes_email = email.split('@')
+        if len(partes_email) == 2:
+            email_anonimizado = partes_email[0][0] + '*' * (len(partes_email[0]) - 1) + '@' + partes_email[1]
+            row_list[3] = email_anonimizado
+    
+    # Anonimizar telefone (apenas os últimos 4 dígitos)
+    telefone = row_list[4]
+    if telefone:
+        telefone_anonimizado = telefone[-4:]
+        row_list[4] = telefone_anonimizado
+    
+    return tuple(row_list)
 
 users = []
 with engine.connect() as conn:
