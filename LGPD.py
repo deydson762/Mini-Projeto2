@@ -2,20 +2,7 @@ from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, 
 from datetime import datetime
 import csv
 import os
-
-import time
-from functools import wraps
-def medir_tempo(func):
-    """Decorator que mede o tempo de execução de uma função."""
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        inicio = time.perf_counter()  # tempo inicial (mais preciso que time.time)
-        resultado = func(*args, **kwargs)
-        fim = time.perf_counter()     # tempo final
-        duracao = fim - inicio
-        print(f"Função '{func.__name__}' executada em {duracao:.6f} segundos.")
-        return resultado
-    return wrapper
+from decorator_tempo import decorator_tempo
 
 engine = create_engine("postgresql+psycopg2://alunos:AlunoFatec@200.19.224.150:5432/atividade2", echo=False)
 metadata = MetaData()
@@ -34,7 +21,6 @@ usuarios = Table(
 
 metadata.create_all(engine)
 
-@medir_tempo
 def LGPD(row):
     row_list = list(row)
     
@@ -67,38 +53,50 @@ def LGPD(row):
     
     return tuple(row_list)
 
-# Atividade 2: Criar arquivos CSV separados por ano de nascimento
-anos = {}
-with engine.connect() as conn:
-    result = conn.execute(text("SELECT * FROM usuarios;"))
-    for row in result:
-        row_anonimizado = LGPD(row)
-        ano_nascimento = row_anonimizado[5].year
-        
-        if ano_nascimento not in anos:
-            anos[ano_nascimento] = []
-        anos[ano_nascimento].append(row_anonimizado)
-
-# Criar diretório para os arquivos se não existir
-os.makedirs('arquivos_por_ano', exist_ok=True)
-
-# Criar arquivo CSV para cada ano
-for ano, usuarios in anos.items():
-    arquivo = f'arquivos_por_ano/{ano}.csv'
-    with open(arquivo, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(['id', 'nome', 'cpf', 'email', 'telefone', 'data_nascimento', 'created_on', 'updated_on'])
-        for usuario in usuarios:
-            writer.writerow(usuario)
-    print(f'Arquivo {arquivo} criado com {len(usuarios)} registros.')
-
-# Atividade 3: Criar arquivo único com todos os registros (apenas nome e CPF, não anonimizados)
-with engine.connect() as conn:
-    result = conn.execute(text("SELECT nome, cpf FROM usuarios;"))
-    
-    with open('todos.csv', 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(['nome', 'cpf'])
+@decorator_tempo
+def atividade_2():
+    """Criar arquivos CSV separados por ano de nascimento."""
+    anos = {}
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT * FROM usuarios;"))
         for row in result:
-            writer.writerow(row)
-    print('Arquivo todos.csv criado com todos os registros (nome e CPF não anonimizados).')
+            row_anonimizado = LGPD(row)
+            ano_nascimento = row_anonimizado[5].year
+            
+            if ano_nascimento not in anos:
+                anos[ano_nascimento] = []
+            anos[ano_nascimento].append(row_anonimizado)
+
+    # Criar diretório para os arquivos se não existir
+    os.makedirs('arquivos_por_ano', exist_ok=True)
+
+    # Criar arquivo CSV para cada ano
+    for ano, usuarios in anos.items():
+        arquivo = f'arquivos_por_ano/{ano}.csv'
+        with open(arquivo, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['id', 'nome', 'cpf', 'email', 'telefone', 'data_nascimento', 'created_on', 'updated_on'])
+            for usuario in usuarios:
+                writer.writerow(usuario)
+        print(f'Arquivo {arquivo} criado com {len(usuarios)} registros.')
+
+@decorator_tempo
+def atividade_3():
+    """Criar arquivo único com todos os registros (apenas nome e CPF, não anonimizados)."""
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT nome, cpf FROM usuarios;"))
+        
+        with open('todos.csv', 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['nome', 'cpf'])
+            for row in result:
+                writer.writerow(row)
+        print('Arquivo todos.csv criado com todos os registros (nome e CPF não anonimizados).')
+
+# Executar atividades
+if __name__ == "__main__":
+    print("Executando Atividade 2...")
+    atividade_2()
+    
+    print("\nExecutando Atividade 3...")
+    atividade_3()
